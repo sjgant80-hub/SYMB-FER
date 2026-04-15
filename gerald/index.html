@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>gerald · audit</title>
+<style>
+  :root {
+    --bg: #0b0b0d;
+    --fg: #e8e8ec;
+    --dim: #7a7a82;
+    --accent: #a4f;
+    --red: #f55;
+    --amber: #fa0;
+    --green: #4a4;
+    --line: #23232a;
+    --panel: #111117;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 13px;
+    line-height: 1.6;
+  }
+  .wrap {
+    max-width: 880px;
+    margin: 0 auto;
+    padding: 32px 20px 96px;
+  }
+  header {
+    border-bottom: 1px solid var(--line);
+    padding-bottom: 14px;
+    margin-bottom: 28px;
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  header .title {
+    font-size: 16px;
+    font-weight: 600;
+  }
+  header .title .sigil { color: var(--accent); }
+  header nav a {
+    color: var(--dim);
+    text-decoration: none;
+    font-size: 12px;
+    margin-left: 14px;
+  }
+  header nav a:hover { color: var(--fg); }
+  #content {
+    white-space: pre-wrap;
+    word-wrap: break-word;
+  }
+  #content h1 {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--accent);
+    border-bottom: 1px solid var(--line);
+    padding-bottom: 6px;
+    margin: 32px 0 14px;
+  }
+  #content h2 {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--fg);
+    margin: 22px 0 8px;
+  }
+  #content h2.sev-high   { color: var(--red); }
+  #content h2.sev-med    { color: var(--amber); }
+  #content h2.sev-low    { color: var(--dim); }
+  #content h2.sev-info   { color: var(--dim); }
+  #content pre {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    padding: 12px 14px;
+    overflow-x: auto;
+    font-size: 12px;
+    line-height: 1.5;
+    margin: 10px 0;
+  }
+  #content code {
+    background: var(--panel);
+    padding: 1px 5px;
+    border-radius: 2px;
+    font-size: 12px;
+  }
+  #content p { margin: 8px 0; }
+  footer {
+    margin-top: 48px;
+    padding-top: 14px;
+    border-top: 1px solid var(--line);
+    color: var(--dim);
+    font-size: 11px;
+    letter-spacing: 0.06em;
+  }
+  .loading { color: var(--dim); font-style: italic; }
+  .err { color: var(--red); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="title"><span class="sigil">&#8756;</span> gerald &middot; audit</div>
+    <nav>
+      <a href="../index.html">&larr; root</a>
+      <a href="../source/index.html">source/</a>
+      <a href="AUDIT_2026-04-15.md">raw .md</a>
+    </nav>
+  </header>
+
+  <div id="content" class="loading">loading AUDIT_2026-04-15.md ...</div>
+
+  <footer>
+    gerald &middot; READ &middot; 2026-04-15 &middot; &#8756;
+  </footer>
+</div>
+
+<script>
+// Minimal markdown renderer tuned for this audit file.
+// No deps. Handles: fenced code, # / ##, inline code, simple paragraphs.
+function renderMarkdown(src) {
+  var out = [];
+  var lines = src.split(/\r?\n/);
+  var inFence = false;
+  var buf = [];
+
+  function esc(s) {
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+  function flush() {
+    if (buf.length) {
+      out.push('<p>' + buf.join('<br>') + '</p>');
+      buf = [];
+    }
+  }
+
+  for (var i = 0; i < lines.length; i++) {
+    var line = lines[i];
+    if (/^```/.test(line)) {
+      if (!inFence) {
+        flush();
+        inFence = true;
+        out.push('<pre>');
+      } else {
+        inFence = false;
+        out.push('</pre>');
+      }
+      continue;
+    }
+    if (inFence) {
+      out.push(esc(line));
+      continue;
+    }
+    if (/^#\s+/.test(line)) {
+      flush();
+      out.push('<h1>' + esc(line.replace(/^#\s+/, '')) + '</h1>');
+      continue;
+    }
+    if (/^##\s+/.test(line)) {
+      flush();
+      var txt = line.replace(/^##\s+/, '');
+      var cls = '';
+      if (/SEV:HIGH/.test(txt)) cls = 'sev-high';
+      else if (/SEV:MED/.test(txt)) cls = 'sev-med';
+      else if (/SEV:LOW/.test(txt)) cls = 'sev-low';
+      else if (/SEV:INFO/.test(txt)) cls = 'sev-info';
+      out.push('<h2' + (cls ? ' class="' + cls + '"' : '') + '>' + esc(txt) + '</h2>');
+      continue;
+    }
+    if (line.trim() === '') {
+      flush();
+      continue;
+    }
+    // inline `code`
+    var html = esc(line).replace(/`([^`]+)`/g, '<code>$1</code>');
+    buf.push(html);
+  }
+  flush();
+  return out.join('\n');
+}
+
+fetch('AUDIT_2026-04-15.md', { cache: 'no-store' })
+  .then(function (r) {
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    return r.text();
+  })
+  .then(function (src) {
+    document.getElementById('content').className = '';
+    document.getElementById('content').innerHTML = renderMarkdown(src);
+  })
+  .catch(function (e) {
+    var el = document.getElementById('content');
+    el.className = 'err';
+    el.textContent = 'failed to load AUDIT_2026-04-15.md: ' + e.message +
+      '\n\nif opened via file:// some browsers block fetch. serve the folder with any static server, e.g.:\n  python3 -m http.server';
+  });
+</script>
+</body>
+</html>
